@@ -1,0 +1,58 @@
+# ===========================================================================
+#  Workflow de GitHub Actions  ·  Quiniela Mundial 2026
+#  Corre el sistema en la nube automaticamente y publica el dashboard.
+#  Ubicacion OBLIGATORIA dentro del repo:  .github/workflows/quiniela.yml
+# ===========================================================================
+name: Actualizar Quiniela
+
+on:
+  schedule:
+    # Corre cada 30 minutos (hora UTC). Guatemala es UTC-6.
+    # Asi captura el fin de cualquier partido sin que hagas nada.
+    - cron: "*/30 * * * *"
+  workflow_dispatch:        # boton "Run workflow" para correrlo manualmente cuando quieras
+  push:
+    paths:
+      - "2026_QUINIELA_CONSOLIDADO.xlsm"   # si subes un Excel nuevo, se actualiza solo
+
+permissions:
+  contents: write           # permite guardar el HTML y el Excel actualizados
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar librerias
+        run: pip install -r requirements.txt
+
+      - name: Ejecutar actualizacion
+        env:
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+        run: python ejecutar_en_la_nube.py
+
+      - name: Guardar cambios (Excel y dashboard) en el repo
+        run: |
+          git config user.name "quiniela-bot"
+          git config user.email "bot@quiniela.local"
+          git add -A
+          git commit -m "Actualizacion automatica de marcadores" || echo "Sin cambios"
+          git push || echo "Nada que subir"
+
+      - name: Preparar publicacion del dashboard
+        run: |
+          mkdir -p public
+          cp Dashboard_Quiniela_2026.html public/index.html
+
+      - name: Publicar en GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
