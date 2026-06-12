@@ -1,20 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-  PASO PREVIO (correr UNA sola vez):  construir_snapshot.py
+  construir_snapshot.py
   --------------------------------------------------------------------------
-  Lee tu Excel ORIGINAL (con las formulas ya calculadas por Excel) y guarda
-  un 'snapshot.json' con:
+  Lee el Excel y guarda 'snapshot.json' con:
      - el listado de partidos (fila, equipos, dia, hora)
      - los vaticinios de cada participante, ligados a la fila del partido
 
-  Por que es necesario: openpyxl (Python) NO recalcula formulas de Excel.
-  Una vez que el script guarda el .xlsm, los nombres y totales calculados
-  por formula se pierden. Con el snapshot, el sistema ya no depende de las
-  formulas: calcula los puntos por su cuenta y siempre funciona.
-
-  Cuando volver a correrlo: solo si cambian los vaticinios de alguien o se
-  agregan/editan participantes. Para actualizar marcadores NO hace falta.
+  IMPORTANTE: lee los nombres de equipo desde las FORMULAS (=+Mexico), porque
+  openpyxl no recalcula formulas y al subir el Excel a la nube los valores
+  calculados pueden venir vacios. Las formulas SIEMPRE estan, asi que de ahi
+  extraemos el nombre de forma confiable.
 """
 import openpyxl, datetime, json, re
 from pathlib import Path
@@ -25,27 +21,43 @@ EXC = {"Hoja1","EDITAR (2)","Instrucciones",HOJA_MARCADORES,"Tabla 1","Banderas"
 
 def is_time(v): return isinstance(v, datetime.time)
 
+def team_name(value_calc, value_formula):
+    """Devuelve el nombre del equipo. Prefiere el valor calculado; si esta
+    vacio, lo extrae de la formula tipo '=+Corea_del_Sur'."""
+    if value_calc not in (None, "", " "):
+        s = str(value_calc).strip()
+        if s and not s.startswith("="):
+            return s
+    if isinstance(value_formula, str) and value_formula.startswith("=+"):
+        return value_formula[2:].replace("_", " ").strip()
+    return None
+
 def main():
     if not Path(EXCEL_PATH).exists():
         print("No encuentro", EXCEL_PATH); return
     wb  = openpyxl.load_workbook(EXCEL_PATH, data_only=True)   # valores calculados
     wbf = openpyxl.load_workbook(EXCEL_PATH, keep_vba=True)    # formulas
     mf  = wb[HOJA_MARCADORES]
+    mff = wbf[HOJA_MARCADORES]
 
     master = []
     for r in range(1, mf.max_row+1):
         b=mf.cell(r,2).value; c=mf.cell(r,3).value
-        d=mf.cell(r,4).value; f=mf.cell(r,6).value
+        d = team_name(mf.cell(r,4).value, mff.cell(r,4).value)
+        f = team_name(mf.cell(r,6).value, mff.cell(r,6).value)
         if is_time(b) and d and f:
             dia = c.date().isoformat() if hasattr(c,"date") else str(c)[:10]
-            master.append({"row":r,"h":b.strftime("%H:%M"),"d":dia,
-                           "l":str(d).strip(),"v":str(f).strip()})
+            master.append({"row":r,"h":b.strftime("%H:%M"),"d":dia,"l":d,"v":f})
 
     players=[]
     for s in wb.sheetnames:
         if s in EXC: continue
         ws=wb[s]; wsf=wbf[s]
-        name=str(ws["C2"].value or s).strip()
+        # nombre del participante (C2), con respaldo al nombre de la hoja
+        name = ws["C2"].value
+        if name in (None, "", " "):
+            name = s
+        name = str(name).strip()
         preds=[]
         for r in range(1, ws.max_row+1):
             hf=wsf.cell(r,8).value      # formula H -> =+Marcadores_FINALES!$E$<fila>
