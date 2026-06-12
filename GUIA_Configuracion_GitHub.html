@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guía: Quiniela 2026 en la nube</title>
+<style>
+  :root{--ink:#0a1a2f;--green:#0b8a4a;--blue:#1d6fe0;--gold:#f5b50a;--red:#e03131;--muted:#5b6b82;--line:#e4e9f2;--soft:#f4f6fb}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;color:var(--ink);line-height:1.65;background:#eef2f8;padding:30px 16px}
+  .doc{max-width:820px;margin:0 auto;background:#fff;border-radius:16px;box-shadow:0 12px 40px rgba(10,26,47,.12);overflow:hidden}
+  .hd{background:linear-gradient(120deg,#0a1a2f,#16365c);color:#fff;padding:30px 34px;position:relative}
+  .hd::after{content:"";position:absolute;left:0;right:0;bottom:0;height:5px;background:linear-gradient(90deg,var(--green) 0 33%,var(--red) 33% 66%,var(--blue) 66%)}
+  .hd h1{font-size:25px;margin-bottom:6px}
+  .hd p{color:#cdd9ea;font-size:14px}
+  .bd{padding:30px 34px}
+  h2{font-size:19px;margin:30px 0 8px;padding-top:18px;border-top:2px solid var(--line);color:var(--ink)}
+  h2:first-child{border-top:none;padding-top:0;margin-top:0}
+  h3{font-size:15px;margin:18px 0 6px;color:var(--blue)}
+  p,li{font-size:14.5px;margin-bottom:8px}
+  ol,ul{margin:8px 0 14px 22px}
+  li{margin-bottom:7px}
+  code{background:var(--soft);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-family:'Consolas',monospace;font-size:13px;color:#b5006a}
+  .box{background:var(--soft);border-left:4px solid var(--blue);border-radius:0 10px 10px 0;padding:12px 16px;margin:14px 0}
+  .box.warn{border-color:var(--gold);background:#fffaf0}
+  .box.ok{border-color:var(--green);background:#f0faf4}
+  .box b{color:var(--ink)}
+  .step{counter-increment:s;position:relative;padding-left:42px;margin:16px 0}
+  .step::before{content:counter(s);position:absolute;left:0;top:-2px;width:30px;height:30px;background:var(--blue);color:#fff;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:15px}
+  .steps{counter-reset:s}
+  .files{counter-reset:none}
+  .file{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--soft);border:1px solid var(--line);border-radius:9px;margin-bottom:7px}
+  .file code{background:#fff}
+  .file .d{font-size:12.5px;color:var(--muted)}
+  .tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;color:#fff;white-space:nowrap}
+  .t-once{background:var(--gold)} .t-auto{background:var(--green)} .t-help{background:var(--muted)}
+  kbd{background:#fff;border:1px solid #ccc;border-bottom-width:2px;border-radius:4px;padding:1px 6px;font-size:12px;font-family:monospace}
+</style>
+</head>
+<body>
+<div class="doc">
+  <div class="hd">
+    <h1>⚽ Quiniela Mundial 2026 — Guía para montarla en la nube</h1>
+    <p>GitHub Actions (corre solo) + GitHub Pages (enlace público). Desde cero, paso a paso.</p>
+  </div>
+  <div class="bd">
+
+    <div class="box">
+      <b>Qué vas a lograr:</b> el sistema correrá solo en internet cada 30 minutos, aunque tu PC y tu celular estén apagados. El enlace del tablero se actualizará por su cuenta. Desde el celular solo abres el enlace para ver todo.
+    </div>
+
+    <h2>Antes de empezar: los archivos del proyecto</h2>
+    <p>Estos son todos los archivos que vas a subir. La etiqueta te dice cuáles tocas tú y cuáles trabajan solos:</p>
+
+    <div class="files">
+      <div class="file"><code>2026_QUINIELA_CONSOLIDADO.xlsm</code><span class="d">Tu Excel de siempre</span><span class="tag t-once">Lo editas tú</span></div>
+      <div class="file"><code>ejecutar_en_la_nube.py</code><span class="d">El motor que corre en la nube</span><span class="tag t-auto">Solo</span></div>
+      <div class="file"><code>actualizar_quiniela.py</code><span class="d">Lógica de marcadores y puntos</span><span class="tag t-auto">Solo</span></div>
+      <div class="file"><code>construir_snapshot.py</code><span class="d">Toma la "foto" de los vaticinios</span><span class="tag t-auto">Solo</span></div>
+      <div class="file"><code>dashboard_template.html</code><span class="d">Plantilla del tablero</span><span class="tag t-auto">Solo</span></div>
+      <div class="file"><code>requirements.txt</code><span class="d">Lista de librerías</span><span class="tag t-auto">Solo</span></div>
+      <div class="file"><code>quiniela.yml</code><span class="d">El horario y las instrucciones para la nube</span><span class="tag t-help">Va en carpeta especial</span></div>
+    </div>
+
+    <div class="box warn">
+      <b>Importante sobre <code>quiniela.yml</code>:</b> este archivo NO va suelto. Tiene que ir dentro de una carpeta llamada <code>.github</code> y adentro otra llamada <code>workflows</code>. La ruta final debe ser exactamente: <code>.github/workflows/quiniela.yml</code>. Más abajo te explico cómo crearla en GitHub.
+    </div>
+
+    <h2>Parte 1 — Crear el repositorio y subir los archivos</h2>
+    <div class="steps">
+      <div class="step">Entra a <code>github.com</code> con tu cuenta. Arriba a la derecha, clic en el <b>+</b> y luego <b>New repository</b>.</div>
+      <div class="step">Ponle un nombre, por ejemplo <code>quiniela-mundial-2026</code>. Marca la opción <b>Private</b> (privado) para que solo tú lo manejes. Clic en <b>Create repository</b>.</div>
+      <div class="step">En la página del repo nuevo, busca el enlace <b>uploading an existing file</b> (o el botón <b>Add file → Upload files</b>).</div>
+      <div class="step">Arrastra ahí <b>todos los archivos</b> de la lista de arriba <b>menos</b> <code>quiniela.yml</code> (ese lo subimos aparte). Abajo escribe un mensaje como "primera subida" y clic en <b>Commit changes</b>.</div>
+      <div class="step">Ahora subimos el <code>quiniela.yml</code> en su carpeta. Clic en <b>Add file → Create new file</b>. En el nombre, escribe exactamente: <code>.github/workflows/quiniela.yml</code> (al escribir las barras <code>/</code>, GitHub crea las carpetas solo).</div>
+      <div class="step">Abre el archivo <code>quiniela.yml</code> que te di, copia <b>todo</b> su contenido, pégalo en la caja de texto, y clic en <b>Commit changes</b>.</div>
+    </div>
+
+    <h2>Parte 2 — Guardar tu API key de forma segura</h2>
+    <p>En vez de dejar tu clave escrita en el código, GitHub la guarda como un "secreto" cifrado.</p>
+    <div class="steps">
+      <div class="step">En tu repo, clic en <b>Settings</b> (arriba).</div>
+      <div class="step">En el menú izquierdo: <b>Secrets and variables → Actions</b>.</div>
+      <div class="step">Clic en <b>New repository secret</b>.</div>
+      <div class="step">En <b>Name</b> escribe exactamente: <code>FOOTBALL_API_KEY</code></div>
+      <div class="step">En <b>Secret</b> pega tu clave: <code>3f2be9e89a4540c5bf8ac91e8bd79c59</code>. Clic en <b>Add secret</b>.</div>
+    </div>
+    <div class="box ok"><b>Listo.</b> El sistema ya sabe usar tu clave sin que quede visible en el código.</div>
+
+    <h2>Parte 3 — Permitir que el sistema publique y guarde</h2>
+    <div class="steps">
+      <div class="step"><b>Settings → Actions → General</b>. Baja hasta <b>Workflow permissions</b>, elige <b>Read and write permissions</b> y guarda. Esto deja que el sistema guarde los marcadores nuevos.</div>
+      <div class="step"><b>Settings → Pages</b>. En <b>Source</b> elige <b>Deploy from a branch</b>. En <b>Branch</b> selecciona <code>gh-pages</code> y carpeta <code>/ (root)</code>, y guarda. <i>(La rama <code>gh-pages</code> aparece sola la primera vez que corre el sistema; si aún no está, vuelve a este paso después de la primera corrida.)</i></div>
+    </div>
+
+    <h2>Parte 4 — Primera corrida y tu enlace público</h2>
+    <div class="steps">
+      <div class="step">Clic en la pestaña <b>Actions</b> de tu repo. Verás el workflow <b>Actualizar Quiniela</b>.</div>
+      <div class="step">Clic en él, luego en <b>Run workflow → Run workflow</b> (botón verde). Esto lo corre de una vez sin esperar los 30 minutos.</div>
+      <div class="step">Espera 1–2 minutos. Cuando aparezca el ✓ verde, ya corrió. Si aparece ✗ rojo, ábrelo para ver el mensaje (casi siempre es un permiso del Paso de la Parte 3).</div>
+      <div class="step">Tu tablero quedará publicado en: <code>https://TU-USUARIO.github.io/quiniela-mundial-2026/</code> (cambia <code>TU-USUARIO</code> por tu usuario de GitHub). <b>Ese es el enlace que compartes a todos por WhatsApp.</b></div>
+    </div>
+    <div class="box ok"><b>De aquí en adelante todo es automático.</b> Cada 30 minutos el sistema revisa si terminó algún partido, actualiza los marcadores, recalcula los puntos y refresca ese mismo enlace. No tienes que hacer nada.</div>
+
+    <h2>Cuando agregues o cambies un participante</h2>
+    <p>Sigues usando tu Excel como siempre: agregas la hoja de la persona, su nombre en la celda C2, sus vaticinios. Luego solo súbelo de nuevo a GitHub:</p>
+    <div class="steps">
+      <div class="step">En tu repo, clic en el archivo <code>2026_QUINIELA_CONSOLIDADO.xlsm</code>, luego en el ícono de lápiz o en <b>Add file → Upload files</b> para reemplazarlo con tu versión nueva.</div>
+      <div class="step"><b>Commit changes.</b> Eso es todo: el sistema detecta el Excel nuevo, vuelve a tomar la "foto" de los vaticinios solo, y actualiza el tablero.</div>
+    </div>
+    <div class="box warn"><b>La única regla para no romper nada:</b> no muevas de columna el marcador (E y G), el nombre (C2) ni la suma (P8). Agregar hojas de participantes nuevos está perfecto; mover esas celdas, no.</div>
+
+    <h2>El envío a WhatsApp</h2>
+    <p>Esta parte sigue siendo de un clic manual, por la política de WhatsApp (ningún sistema gratuito puede enviar solo a un número personal). El flujo es sencillo: cuando quieras mandar el avance, abres el enlace del tablero en tu celular, le tomas un screenshot normal, y lo compartes al grupo o al número <code>50255152112</code>. Como el enlace ya está siempre actualizado, el screenshot siempre muestra los datos más recientes.</p>
+
+    <h2>Resumen de tu día a día</h2>
+    <ul>
+      <li><b>Terminó un partido:</b> no haces nada. El sistema actualiza el tablero solo.</li>
+      <li><b>Quieres ver la tabla:</b> abres tu enlace de GitHub Pages desde el celular.</li>
+      <li><b>Quieres mandar a WhatsApp:</b> screenshot del tablero y compartir.</li>
+      <li><b>Agregaste a alguien:</b> subes el Excel nuevo a GitHub y listo.</li>
+    </ul>
+
+  </div>
+</div>
+</body>
+</html>
