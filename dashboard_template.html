@@ -347,11 +347,26 @@ function renderStandings(){
 const DAYS=[...new Set(MATCHES.map(m=>m.d))].sort();
 function matchesOn(day){return MATCHES.filter(m=>m.d===day);}
 
-/* pick the "current" day: last day with any played match, else first day */
+/* pick the "current" day:
+   1) si HOY (fecha real) tiene partidos, muestra hoy
+   2) si hoy no tiene, muestra el proximo dia con partidos
+   3) si ya no hay proximos (torneo terminado), muestra el ultimo dia */
+function todayISO(){
+  const n=new Date();
+  const y=n.getFullYear();
+  const m=String(n.getMonth()+1).padStart(2,'0');
+  const d=String(n.getDate()).padStart(2,'0');
+  return `${y}-${m}-${d}`;
+}
 function defaultDayIdx(){
-  let idx=0;
-  for(let i=0;i<DAYS.length;i++) if(matchesOn(DAYS[i]).some(isPlayed)) idx=i;
-  return idx;
+  const hoy=todayISO();
+  // 1) hoy exacto
+  let exact=DAYS.indexOf(hoy);
+  if(exact!==-1) return exact;
+  // 2) primer dia >= hoy (el proximo con partidos)
+  for(let i=0;i<DAYS.length;i++){ if(DAYS[i]>=hoy) return i; }
+  // 3) torneo terminado -> ultimo dia
+  return DAYS.length-1;
 }
 let dayIdx=defaultDayIdx();
 
@@ -388,19 +403,32 @@ function renderTopTeam(day){
   const ms=matchesOn(day).filter(isPlayed);
   const tally={};
   ms.forEach(m=>{tally[m.l]=(tally[m.l]||0)+ +m.gl; tally[m.v]=(tally[m.v]||0)+ +m.gv;});
-  const arr=Object.entries(tally).sort((a,b)=>b[1]-a[1]);
+  const arr=Object.entries(tally).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
   const el=document.getElementById('topteam');
   document.getElementById('ttDay').textContent=fmtDay(day);
   if(!arr.length||arr[0][1]===0){
     el.innerHTML=`<div class="bigflag">⚽</div><div><div class="tt-lab">Aún sin goles</div><div style="font-weight:700;font-size:15px">Esperando resultados de la jornada</div></div>`;
     return;
   }
-  const[team,goals]=arr[0];
-  const ab=team.replace(/[^A-Za-zÁÉÍÓÚÑ]/g,'').slice(0,3).toUpperCase();
-  el.innerHTML=`<div class="bigflag">${ab}</div>
-    <div style="z-index:2"><div class="tt-lab">Más goles en la jornada</div>
-    <div style="font-family:'Archivo Black';font-size:20px;line-height:1.1;margin:2px 0">${team}</div></div>
-    <div style="margin-left:auto;text-align:right;z-index:2"><div class="tt-num">${goals}</div><div class="tt-lab">goles</div></div>`;
+  // Find max goals and all teams with that max
+  const maxGoals=arr[0][1];
+  const topTeams=arr.filter(([_,g])=>g===maxGoals).map(([t,_])=>t);
+  
+  if(topTeams.length===1){
+    // Single leader
+    const team=topTeams[0];
+    const ab=team.replace(/[^A-Za-zÁÉÍÓÚÑ]/g,'').slice(0,3).toUpperCase();
+    el.innerHTML=`<div class="bigflag">${ab}</div>
+      <div style="z-index:2"><div class="tt-lab">Más goles en la jornada</div>
+      <div style="font-family:'Archivo Black';font-size:20px;line-height:1.1;margin:2px 0">${team}</div></div>
+      <div style="margin-left:auto;text-align:right;z-index:2"><div class="tt-num">${maxGoals}</div><div class="tt-lab">goles</div></div>`;
+  }else{
+    // Tied teams
+    const teamList=topTeams.join(' vs ');
+    el.innerHTML=`<div style="z-index:2"><div class="tt-lab">Empate en máximos goles</div>
+      <div style="font-family:'Archivo Black';font-size:16px;line-height:1.2;margin:2px 0">${teamList}</div></div>
+      <div style="margin-left:auto;text-align:right;z-index:2"><div class="tt-num">${maxGoals}</div><div class="tt-lab">goles</div></div>`;
+  }
 }
 
 /* ---------- DAY POINTS (podium) ----------
@@ -440,7 +468,7 @@ function renderPodium(){
 
 /* ---------- KPIs ---------- */
 function renderKPIs(){
-  const sorted=[...PLAYERS].sort((a,b)=>b.p-a.p);
+  const sorted=[...PLAYERS].sort((a,b)=>b.p-a.p||a.n.localeCompare(b.n));
   const leader=sorted[0];
   const playedCount=MATCHES.filter(isPlayed).length;
   const totalGoals=MATCHES.filter(isPlayed).reduce((s,m)=>s+ +m.gl+ +m.gv,0);
