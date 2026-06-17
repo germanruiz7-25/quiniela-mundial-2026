@@ -345,6 +345,7 @@
     <section class="card">
       <div class="card-h">
         <div class="eyebrow"><span class="tag gold"></span><h2>Datos de la jornada</h2></div>
+        <span class="sub" id="dataDayLabel"></span>
       </div>
       <div class="card-b"><div class="mini3" id="dataDay"></div></div>
     </section>
@@ -614,6 +615,7 @@ function renderCarousel(){
   body.classList.remove('car-fade');void body.offsetWidth;body.classList.add('car-fade');
   document.getElementById('cPager').textContent=`${carPage+1} / ${pages} · ${rows.length} jugadores`;
   renderChips();
+  if(typeof renderPopularPred==='function') renderPopularPred();
 }
 document.getElementById('cNext').onclick=()=>{const m=carMatches[carMatchIdx];const n=PLAYERS.filter(p=>{const pr=p.preds[keyOf(m)];return pr&&pr.l!==''&&pr.v!=='';}).length;const pages=Math.max(1,Math.ceil(n/PAGE));carPage=(carPage+1)%pages;renderCarousel();};
 document.getElementById('cPrev').onclick=()=>{const m=carMatches[carMatchIdx];const n=PLAYERS.filter(p=>{const pr=p.preds[keyOf(m)];return pr&&pr.l!==''&&pr.v!=='';}).length;const pages=Math.max(1,Math.ceil(n/PAGE));carPage=(carPage-1+pages)%pages;renderCarousel();};
@@ -623,6 +625,31 @@ let carTimer=setInterval(()=>document.getElementById('cNext').click(),6000);
 
 /* ---------- ANALYTICS RENDERING ---------- */
 const AN = D.analytics || {};
+function renderPopularPred(){
+  const pm = (typeof carMatches!=='undefined' && carMatches.length) ? carMatches[carMatchIdx] : null;
+  const el = document.getElementById('popularPred');
+  if(!el) return;
+  if(pm){
+    const k = keyOf(pm);
+    const counts={}; let total=0;
+    PLAYERS.forEach(p=>{
+      const pr=p.preds[k];
+      if(pr && pr.l!=='' && pr.v!==''){
+        const s=`${pr.l}-${pr.v}`;
+        counts[s]=(counts[s]||0)+1; total++;
+      }
+    });
+    if(total){
+      const top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+      const pct=Math.round(100*top[1]/total);
+      el.innerHTML=`<div class="pop-score">${top[0]}</div>
+        <div><div class="pop-m">${pm.l} vs ${pm.v}</div><div class="pop-d">El marcador que más gente apostó</div></div>
+        <div class="pop-pct"><div class="n">${pct}%</div><div class="l">${top[1]} de ${total} jugadores</div></div>`;
+    }else{
+      el.innerHTML=`<div class="pop-d">Aún no hay vaticinios para este partido.</div>`;
+    }
+  }
+}
 function renderAnalytics(){
   const medals=['🥇','🥈','🥉'], cls=['g1','g2','g3'];
   const t=AN.termometro;
@@ -644,20 +671,18 @@ function renderAnalytics(){
     if(el)el.innerHTML=AN.tasa_aciertos.map((x,i)=>
       `<div class="statmini ${cls[i]}"><div class="md">${medals[i]}</div><div class="nm">${x.n}</div><div class="vl">${x.tasa}%</div><div class="lb">tasa de aciertos</div></div>`).join('');
   }
-  const p=AN.popular;
-  if(p){
-    const el=document.getElementById('popularPred');
-    if(el)el.innerHTML=`<div class="pop-score">${p.score}</div>
-      <div><div class="pop-m">${p.match}</div><div class="pop-d">El marcador que más gente apostó</div></div>
-      <div class="pop-pct"><div class="n">${p.pct}%</div><div class="l">${p.n} de ${p.total} jugadores</div></div>`;
-  }
-  const f=AN.facil,d2=AN.dificil,s=AN.sorpresa;
-  if(f&&d2&&s){
+  // Prediccion mas popular: SIEMPRE basada en el mismo partido que el carrusel
+  renderPopularPred();
+  const f=AN.facil,d2=AN.dificil;
+  if(f&&d2){
+    const prom=(AN.prom_dia!==null&&AN.prom_dia!==undefined)?AN.prom_dia:0;
+    const lbl=document.getElementById('dataDayLabel');
+    if(lbl&&AN.dia_label) lbl.textContent=fmtDay(AN.dia_label);
     const el=document.getElementById('dataDay');
     if(el)el.innerHTML=
       `<div class="factbox"><div class="lb">✅ Más fácil de acertar</div><div class="m">${f.match}</div><div class="pb"><div class="pf" style="width:${Math.max(f.pct,3)}%;background:var(--green)"></div></div><div class="pn">${f.pct}% acertó</div></div>
        <div class="factbox"><div class="lb">🤯 Más difícil</div><div class="m">${d2.match}</div><div class="pb"><div class="pf" style="width:${Math.max(d2.pct,3)}%;background:var(--red)"></div></div><div class="pn">solo ${d2.pct}% acertó</div></div>
-       <div class="factbox"><div class="lb">⚡ La sorpresa</div><div class="m">${s.match}</div><div class="pb"><div class="pf" style="width:${Math.max(s.pct,3)}%;background:var(--gold)"></div></div><div class="pn">rompió pronósticos</div></div>`;
+       <div class="factbox"><div class="lb">📊 Promedio del día</div><div class="m">El grupo acertó en promedio</div><div class="pb"><div class="pf" style="width:${Math.max(prom,3)}%;background:var(--blue)"></div></div><div class="pn">${prom}% de aciertos</div></div>`;
   }
 }
 

@@ -231,27 +231,40 @@ def compute_analytics(snap, finals):
             popular={"match":f'{mrow[next_row]["l"]} vs {mrow[next_row]["v"]}',
                      "score":top[0],"pct":round(100*top[1]/total),"n":top[1],"total":total}
 
-    # facil / dificil / sorpresa
-    rates=[]
+    # ===== RESUMEN DE LA JORNADA (ultimo dia con partidos jugados) =====
+    # agrupar partidos jugados por fecha
+    by_day=defaultdict(list)
     for r in played_rows:
-        m=mrow[r]; fin=finals[r]; ok=tot=0
-        for p in snap["players"]:
-            for pr in p["preds"]:
-                if pr["mrow"]==r:
-                    tot+=1
-                    if score(pr["pl"],pr["pv"],fin[0],fin[1])>=2: ok+=1
-        if tot: rates.append((round(100*ok/tot), f'{m["l"]} {fin[0]}-{fin[1]} {m["v"]}'))
-    facil=dif=sorp=None
-    if rates:
-        rs=sorted(rates,key=lambda x:-x[0])
-        facil={"match":rs[0][1],"pct":rs[0][0]}
-        dif={"match":rs[-1][1],"pct":rs[-1][0]}
-        sorp={"match":rs[-1][1],"pct":rs[-1][0]}
+        by_day[mrow[r]["d"]].append(r)
+    facil=dif=None; prom_dia=None; dia_label=None
+    if by_day:
+        ultimo_dia=sorted(by_day.keys())[-1]      # fecha mas reciente con partidos
+        dia_label=ultimo_dia
+        rows_dia=by_day[ultimo_dia]
+        rates=[]            # (pct_aciertos, "Equipo X-Y Equipo")
+        acc_sum=acc_n=0     # para el promedio del dia
+        for r in rows_dia:
+            m=mrow[r]; fin=finals[r]; ok=tot=0
+            for p in snap["players"]:
+                for pr in p["preds"]:
+                    if pr["mrow"]==r:
+                        tot+=1
+                        if score(pr["pl"],pr["pv"],fin[0],fin[1])>=2: ok+=1
+            if tot:
+                pct=round(100*ok/tot)
+                rates.append((pct, f'{m["l"]} {fin[0]}-{fin[1]} {m["v"]}'))
+                acc_sum+=pct; acc_n+=1
+        if rates:
+            rs=sorted(rates,key=lambda x:-x[0])
+            facil={"match":rs[0][1],"pct":rs[0][0]}
+            dif={"match":rs[-1][1],"pct":rs[-1][0]}
+            prom_dia=round(acc_sum/acc_n) if acc_n else 0
 
     return {"termometro":{"texto":temp,"gap":gap,"contendientes":cont},
             "mejor_pronosticador":[{"n":b["n"],"exact":b["exact"]} for b in best],
             "tasa_aciertos":[{"n":b["n"],"tasa":b["tasa"]} for b in by_rate],
-            "popular":popular,"facil":facil,"dificil":dif,"sorpresa":sorp,
+            "popular":popular,"facil":facil,"dificil":dif,
+            "prom_dia":prom_dia,"dia_label":dia_label,
             "jugados":len(played_rows)}
 
 def compute_movement(players):
