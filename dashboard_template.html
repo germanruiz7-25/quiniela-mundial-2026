@@ -115,8 +115,35 @@
   #standings{max-height:560px;overflow-y:auto;padding-right:6px}
   #standings::-webkit-scrollbar{width:8px}
   #standings::-webkit-scrollbar-thumb{background:#cdd6e6;border-radius:8px}
-  .bar-row{display:grid;grid-template-columns:34px 1fr 44px;align-items:center;gap:10px;padding:6px 2px}
+  .bar-row{display:grid;grid-template-columns:28px 30px 1fr 44px;align-items:center;gap:8px;padding:6px 2px}
   .rank{font-family:'Barlow Condensed';font-weight:700;font-size:16px;color:var(--muted);text-align:center}
+  .mvar{font-size:11px;font-weight:700;text-align:center;white-space:nowrap}
+  .mvar.up{color:var(--green)} .mvar.dn{color:var(--red)} .mvar.eq{color:#b6c0d0} .mvar.nw{color:var(--blue);font-size:16px}
+  /* ===== ANALYTICS SECTIONS ===== */
+  .thermo-wrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .thermo-big{font-family:'Archivo Black';font-size:20px;line-height:1.15}
+  .thermo-track{flex:1;min-width:180px;height:13px;border-radius:8px;background:var(--panel-soft);overflow:hidden}
+  .thermo-fill{height:100%;border-radius:8px;background:linear-gradient(90deg,var(--green),var(--gold),var(--red));width:0;transition:width 1s ease}
+  .thermo-meta{color:var(--muted);font-size:13px;font-weight:600}
+  .mini3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .statmini{border:2px solid var(--line);border-radius:14px;padding:14px;text-align:center}
+  .statmini.g1{border-color:var(--gold)}.statmini.g2{border-color:#9aa7bd}.statmini.g3{border-color:#cd7f32}
+  .statmini .md{font-size:18px;margin-bottom:5px}
+  .statmini .nm{font-weight:700;font-size:14px;margin-bottom:3px;line-height:1.2}
+  .statmini .vl{font-family:'Archivo Black';font-size:20px;color:var(--green)}
+  .statmini .lb{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.4px;margin-top:2px}
+  .pop-wrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .pop-score{font-family:'Archivo Black';font-size:30px;color:var(--blue);background:var(--panel-soft);padding:8px 18px;border-radius:14px}
+  .pop-m{font-weight:700;font-size:16px}.pop-d{color:var(--muted);font-size:12px;margin-top:3px}
+  .pop-pct{margin-left:auto;text-align:right}.pop-pct .n{font-family:'Archivo Black';font-size:26px;color:var(--green)}
+  .pop-pct .l{color:var(--muted);font-size:10px;text-transform:uppercase}
+  .factbox{background:var(--panel-soft);border-radius:14px;padding:14px}
+  .factbox .lb{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-bottom:7px}
+  .factbox .m{font-weight:700;font-size:14px;margin-bottom:6px;line-height:1.2}
+  .factbox .pb{height:7px;border-radius:5px;background:#e4e9f2;overflow:hidden}
+  .factbox .pf{height:100%;border-radius:5px}
+  .factbox .pn{font-size:12px;color:var(--muted);margin-top:5px;font-weight:600}
+  @media(max-width:760px){.mini3{grid-template-columns:1fr}}
   .rank.top1{color:var(--gold-d)} .rank.top2{color:#8a93a3} .rank.top3{color:#b5743a}
   .barwrap{position:relative;background:var(--panel-soft);border-radius:9px;height:30px;overflow:hidden;border:1px solid var(--line)}
   .bar{position:absolute;left:0;top:0;bottom:0;border-radius:9px 0 0 9px;display:flex;align-items:center;
@@ -226,6 +253,15 @@
     <!-- KPI ROW -->
     <div class="row kpi" id="kpiRow"></div>
 
+    <!-- TERMOMETRO -->
+    <section class="card">
+      <div class="card-h">
+        <div class="eyebrow"><span class="tag red"></span><h2>Termómetro de la quiniela</h2></div>
+        <span class="sub">qué tan reñida está</span>
+      </div>
+      <div class="card-b"><div class="thermo-wrap" id="thermo"></div></div>
+    </section>
+
     <!-- MAIN: standings + day winners -->
     <div class="row two">
       <section class="card">
@@ -277,6 +313,41 @@
         <div class="card-b"><div id="nextMatches"></div></div>
       </section>
     </div>
+
+    <!-- BEST FORECASTER + HIT RATE -->
+    <div class="row two">
+      <section class="card">
+        <div class="card-h">
+          <div class="eyebrow"><span class="tag green"></span><h2>Mejor pronosticador</h2></div>
+          <span class="sub">más marcadores exactos</span>
+        </div>
+        <div class="card-b"><div class="mini3" id="bestForecaster"></div></div>
+      </section>
+      <section class="card">
+        <div class="card-h">
+          <div class="eyebrow"><span class="tag blue"></span><h2>Tasa de aciertos</h2></div>
+          <span class="sub">% de resultados acertados</span>
+        </div>
+        <div class="card-b"><div class="mini3" id="hitRate"></div></div>
+      </section>
+    </div>
+
+    <!-- POPULAR PREDICTION -->
+    <section class="card">
+      <div class="card-h">
+        <div class="eyebrow"><span class="tag blue"></span><h2>Predicción más popular</h2></div>
+        <span class="sub">próximo partido</span>
+      </div>
+      <div class="card-b"><div class="pop-wrap" id="popularPred"></div></div>
+    </section>
+
+    <!-- DATA OF THE DAY -->
+    <section class="card">
+      <div class="card-h">
+        <div class="eyebrow"><span class="tag gold"></span><h2>Datos de la jornada</h2></div>
+      </div>
+      <div class="card-b"><div class="mini3" id="dataDay"></div></div>
+    </section>
 
     <!-- CAROUSEL -->
     <section class="card">
@@ -341,8 +412,14 @@ function renderStandings(){
     const c=palette[i%palette.length];
     const dark = w>34;
     const rk = i<3?`top${i+1}`:'';
+    let mv='';
+    if(p.mv==='up') mv=`<span class="mvar up" title="Subió ${p.mvd}">▲${p.mvd}</span>`;
+    else if(p.mv==='dn') mv=`<span class="mvar dn" title="Bajó ${p.mvd}">▼${p.mvd}</span>`;
+    else if(p.mv==='new') mv=`<span class="mvar nw" title="Nuevo">•</span>`;
+    else mv=`<span class="mvar eq">–</span>`;
     return `<div class="bar-row">
       <div class="rank ${rk}">${i+1}</div>
+      ${mv}
       <div class="barwrap"><div class="bar ${dark?'dark':''}" style="width:0;background:${c}" data-w="${w}">
         <span class="nm">${p.n}</span></div></div>
       <div class="pts">${p.p}</div></div>`;
@@ -544,6 +621,46 @@ document.getElementById('cPrev').onclick=()=>{const m=carMatches[carMatchIdx];co
 /* auto-advance carousel every 6s */
 let carTimer=setInterval(()=>document.getElementById('cNext').click(),6000);
 
+/* ---------- ANALYTICS RENDERING ---------- */
+const AN = D.analytics || {};
+function renderAnalytics(){
+  const medals=['🥇','🥈','🥉'], cls=['g1','g2','g3'];
+  const t=AN.termometro;
+  if(t){
+    const fill=t.gap===0?90:Math.max(25,85-t.gap*10);
+    const el=document.getElementById('thermo');
+    if(el){el.innerHTML=`<div class="thermo-big">${t.texto}</div>
+      <div class="thermo-track"><div class="thermo-fill" data-w="${fill}"></div></div>
+      <div class="thermo-meta">${t.contendientes} jugadores a 3 pts o menos del líder</div>`;
+      requestAnimationFrame(()=>{const f=el.querySelector('.thermo-fill');if(f)setTimeout(()=>f.style.width=f.dataset.w+'%',120);});}
+  }
+  if(AN.mejor_pronosticador){
+    const el=document.getElementById('bestForecaster');
+    if(el)el.innerHTML=AN.mejor_pronosticador.map((x,i)=>
+      `<div class="statmini ${cls[i]}"><div class="md">${medals[i]}</div><div class="nm">${x.n}</div><div class="vl">${x.exact}</div><div class="lb">marcadores exactos</div></div>`).join('');
+  }
+  if(AN.tasa_aciertos){
+    const el=document.getElementById('hitRate');
+    if(el)el.innerHTML=AN.tasa_aciertos.map((x,i)=>
+      `<div class="statmini ${cls[i]}"><div class="md">${medals[i]}</div><div class="nm">${x.n}</div><div class="vl">${x.tasa}%</div><div class="lb">tasa de aciertos</div></div>`).join('');
+  }
+  const p=AN.popular;
+  if(p){
+    const el=document.getElementById('popularPred');
+    if(el)el.innerHTML=`<div class="pop-score">${p.score}</div>
+      <div><div class="pop-m">${p.match}</div><div class="pop-d">El marcador que más gente apostó</div></div>
+      <div class="pop-pct"><div class="n">${p.pct}%</div><div class="l">${p.n} de ${p.total} jugadores</div></div>`;
+  }
+  const f=AN.facil,d2=AN.dificil,s=AN.sorpresa;
+  if(f&&d2&&s){
+    const el=document.getElementById('dataDay');
+    if(el)el.innerHTML=
+      `<div class="factbox"><div class="lb">✅ Más fácil de acertar</div><div class="m">${f.match}</div><div class="pb"><div class="pf" style="width:${Math.max(f.pct,3)}%;background:var(--green)"></div></div><div class="pn">${f.pct}% acertó</div></div>
+       <div class="factbox"><div class="lb">🤯 Más difícil</div><div class="m">${d2.match}</div><div class="pb"><div class="pf" style="width:${Math.max(d2.pct,3)}%;background:var(--red)"></div></div><div class="pn">solo ${d2.pct}% acertó</div></div>
+       <div class="factbox"><div class="lb">⚡ La sorpresa</div><div class="m">${s.match}</div><div class="pb"><div class="pf" style="width:${Math.max(s.pct,3)}%;background:var(--gold)"></div></div><div class="pn">rompió pronósticos</div></div>`;
+  }
+}
+
 /* ---------- init ---------- */
 renderKPIs();
 renderStandings();
@@ -551,6 +668,7 @@ renderToday();
 renderNext();
 renderPodium();
 renderCarousel();
+renderAnalytics();
 
 /* re-render podium when day changes */
 const obsPrev=document.getElementById('dPrev'),obsNext=document.getElementById('dNext');

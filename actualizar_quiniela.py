@@ -177,6 +177,120 @@ def read_final_scores():
         except: finals[r]=None
     return finals
 
+HISTORIAL = "historial.json"   # guarda fotos diarias de la tabla para el movimiento
+
+def compute_analytics(snap, finals):
+    """Calcula estadisticas avanzadas a partir del snapshot y los marcadores."""
+    from collections import defaultdict
+    mrow={m["row"]:m for m in snap["master"]}
+    played_rows=[r for r,f in finals.items() if f and r in mrow]
+
+    # per-player stats over played matches
+    stats=[]
+    for p in snap["players"]:
+        tot=exact=res_ok=njug=0
+        pred_by_row={pr["mrow"]:pr for pr in p["preds"]}
+        for r in played_rows:
+            if r in pred_by_row:
+                pr=pred_by_row[r]; fin=finals[r]
+                pts=score(pr["pl"],pr["pv"],fin[0],fin[1])
+                tot+=pts; njug+=1
+                if pts==5: exact+=1
+                if pts>=2: res_ok+=1
+        stats.append({"n":p["n"],"pts":tot,"exact":exact,
+                      "njug":njug,"tasa":round(100*res_ok/njug) if njug else 0})
+    stats.sort(key=lambda x:(-x["pts"], x["n"]))
+
+    # termometro
+    if len(stats)>=2:
+        gap=stats[0]["pts"]-stats[1]["pts"]
+        cont=sum(1 for s in stats if stats[0]["pts"]-s["pts"]<=3)
+        if gap==0: temp="🔥 Reñidísima — empate en la cima"
+        elif gap<=2: temp="🔥 Muy reñida — todo por definir"
+        elif gap<=5: temp="⚡ Competida — el líder saca ventaja"
+        else: temp="🏃 El líder se escapa"
+    else: temp="—"; gap=0; cont=0
+
+    best=sorted(stats,key=lambda x:(-x["exact"],-x["pts"]))[:3]
+    by_rate=sorted([s for s in stats if s["njug"]>0],key=lambda x:(-x["tasa"],-x["pts"]))[:3]
+
+    # prediccion mas popular (proximo partido sin jugar)
+    next_row=None
+    for m in snap["master"]:
+        if m["row"] not in finals or not finals[m["row"]]:
+            next_row=m["row"]; break
+    popular=None
+    if next_row:
+        cnt=defaultdict(int); total=0
+        for p in snap["players"]:
+            for pr in p["preds"]:
+                if pr["mrow"]==next_row:
+                    cnt[f'{pr["pl"]}-{pr["pv"]}']+=1; total+=1
+        if total:
+            top=sorted(cnt.items(),key=lambda x:-x[1])[0]
+            popular={"match":f'{mrow[next_row]["l"]} vs {mrow[next_row]["v"]}',
+                     "score":top[0],"pct":round(100*top[1]/total),"n":top[1],"total":total}
+
+    # facil / dificil / sorpresa
+    rates=[]
+    for r in played_rows:
+        m=mrow[r]; fin=finals[r]; ok=tot=0
+        for p in snap["players"]:
+            for pr in p["preds"]:
+                if pr["mrow"]==r:
+                    tot+=1
+                    if score(pr["pl"],pr["pv"],fin[0],fin[1])>=2: ok+=1
+        if tot: rates.append((round(100*ok/tot), f'{m["l"]} {fin[0]}-{fin[1]} {m["v"]}'))
+    facil=dif=sorp=None
+    if rates:
+        rs=sorted(rates,key=lambda x:-x[0])
+        facil={"match":rs[0][1],"pct":rs[0][0]}
+        dif={"match":rs[-1][1],"pct":rs[-1][0]}
+        sorp={"match":rs[-1][1],"pct":rs[-1][0]}
+
+    return {"termometro":{"texto":temp,"gap":gap,"contendientes":cont},
+            "mejor_pronosticador":[{"n":b["n"],"exact":b["exact"]} for b in best],
+            "tasa_aciertos":[{"n":b["n"],"tasa":b["tasa"]} for b in by_rate],
+            "popular":popular,"facil":facil,"dificil":dif,"sorpresa":sorp,
+            "jugados":len(played_rows)}
+
+def compute_movement(players):
+    """Compara la tabla de hoy con la foto anterior guardada y devuelve
+    el movimiento (subio/bajo/igual) de cada jugador por nombre."""
+    today=datetime.date.today().isoformat()
+    # orden actual
+    order=[p["n"] for p in sorted(players,key=lambda x:(-x["p"],x["n"]))]
+    pos_now={n:i+1 for i,n in enumerate(order)}
+
+    hist={}
+    hp=Path(HISTORIAL)
+    if hp.exists():
+        try: hist=json.loads(hp.read_text(encoding="utf-8"))
+        except: hist={}
+
+    # foto anterior = la ultima fecha distinta a hoy
+    prev_dates=[d for d in sorted(hist.keys()) if d<today]
+    move={}
+    if prev_dates:
+        prev=hist[prev_dates[-1]]   # {nombre:posicion}
+        for n,pos in pos_now.items():
+            old=prev.get(n)
+            if old is None: move[n]=("new",0)
+            elif old>pos: move[n]=("up",old-pos)
+            elif old<pos: move[n]=("dn",pos-old)
+            else: move[n]=("eq",0)
+    else:
+        for n in pos_now: move[n]=("eq",0)
+
+    # guardar foto de hoy (sobrescribe la de hoy si ya existe)
+    hist[today]=pos_now
+    # mantener solo ultimas 40 fechas para no crecer infinito
+    for d in sorted(hist.keys())[:-40]:
+        del hist[d]
+    try: hp.write_text(json.dumps(hist,ensure_ascii=False),encoding="utf-8")
+    except Exception as e: print("  [hist] no se pudo guardar:",e)
+    return move
+
 def build_data_blob(snap):
     finals=read_final_scores()
     mrow={m["row"]:m for m in snap["master"]}
@@ -195,7 +309,15 @@ def build_data_blob(snap):
             fin=finals.get(pr["mrow"])
             if fin: total+=score(pr["pl"],pr["pv"],fin[0],fin[1])
         players.append({"n":p["n"],"p":total,"preds":preds})
-    return {"matches":matches,"players":players}
+
+    analytics=compute_analytics(snap, finals)
+    movement=compute_movement(players)
+    # adjuntar movimiento a cada jugador
+    for p in players:
+        mv=movement.get(p["n"],("eq",0))
+        p["mv"]=mv[0]; p["mvd"]=mv[1]
+
+    return {"matches":matches,"players":players,"analytics":analytics}
 
 def regenerate_dashboard(snap):
     tpl=Path(TEMPLATE_HTML)
