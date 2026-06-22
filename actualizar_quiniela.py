@@ -189,16 +189,21 @@ def compute_analytics(snap, finals):
     stats=[]
     for p in snap["players"]:
         tot=exact=res_ok=njug=0
+        p5=p3=p2=p0=0
         pred_by_row={pr["mrow"]:pr for pr in p["preds"]}
         for r in played_rows:
             if r in pred_by_row:
                 pr=pred_by_row[r]; fin=finals[r]
                 pts=score(pr["pl"],pr["pv"],fin[0],fin[1])
                 tot+=pts; njug+=1
-                if pts==5: exact+=1
+                if pts==5: exact+=1; p5+=1
+                elif pts==3: p3+=1
+                elif pts==2: p2+=1
+                else: p0+=1
                 if pts>=2: res_ok+=1
         stats.append({"n":p["n"],"pts":tot,"exact":exact,
-                      "njug":njug,"tasa":round(100*res_ok/njug) if njug else 0})
+                      "njug":njug,"tasa":round(100*res_ok/njug) if njug else 0,
+                      "p5":p5,"p3":p3,"p2":p2,"p0":p0})
     stats.sort(key=lambda x:(-x["pts"], x["n"]))
 
     # termometro
@@ -265,6 +270,10 @@ def compute_analytics(snap, finals):
             "tasa_aciertos":[{"n":b["n"],"tasa":b["tasa"]} for b in by_rate],
             "popular":popular,"facil":facil,"dificil":dif,
             "prom_dia":prom_dia,"dia_label":dia_label,
+            "desglose":[{"n":s["n"],"p5":s["p5"],"p3":s["p3"],"p2":s["p2"],
+                         "p0":s["p0"],"tot":s["pts"],
+                         "pct":round(100*(s["p5"]+s["p3"]+s["p2"])/s["njug"]) if s["njug"] else 0}
+                        for s in stats],
             "jugados":len(played_rows)}
 
 def compute_movement(players):

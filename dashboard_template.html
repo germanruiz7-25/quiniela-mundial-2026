@@ -144,6 +144,32 @@
   .factbox .pf{height:100%;border-radius:5px}
   .factbox .pn{font-size:12px;color:var(--muted);margin-top:5px;font-weight:600}
   @media(max-width:760px){.mini3{grid-template-columns:1fr}}
+  /* ===== DESGLOSE POR JUGADOR ===== */
+  .dg-legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;font-size:12px;font-weight:600;color:var(--muted)}
+  .dg-legend span{display:inline-flex;align-items:center;gap:6px}
+  .dg-dot{width:11px;height:11px;border-radius:3px;display:inline-block}
+  .dg-dot.d5{background:var(--green)}.dg-dot.d3{background:var(--blue)}.dg-dot.d2{background:var(--gold)}.dg-dot.d0{background:#c2cbd9}
+  .dg-search{width:100%;padding:11px 14px;border:1.5px solid var(--line);border-radius:11px;font-size:14px;font-family:inherit;margin-bottom:14px;outline:none}
+  .dg-search:focus{border-color:var(--blue)}
+  .dg-tablewrap{overflow-x:auto}
+  .dg-table{width:100%;border-collapse:collapse;font-size:14px;min-width:540px}
+  .dg-table thead th{font-family:'Barlow Condensed';font-weight:600;text-transform:uppercase;letter-spacing:.4px;font-size:12px;color:var(--muted);padding:8px 6px;border-bottom:2px solid var(--line);text-align:center}
+  .dg-table thead th.lft{text-align:left}
+  .dg-table td{padding:9px 6px;border-bottom:1px solid var(--line);text-align:center}
+  .dg-table tr.hidden{display:none}
+  .dg-num{font-weight:700;color:var(--muted);width:30px}
+  .dg-num.rk1{color:var(--gold)}.dg-num.rk2{color:#9aa7bd}.dg-num.rk3{color:#cd7f32}
+  .dg-pl{text-align:left !important;font-weight:600}
+  .dg-c{font-weight:700;width:46px}
+  .dg-c.c5{color:var(--green)}.dg-c.c3{color:var(--blue)}.dg-c.c2{color:var(--gold)}.dg-c.c0{color:#aab4c4}
+  .dg-pctcell{width:130px}
+  .dg-pctwrap{display:flex;align-items:center;gap:8px}
+  .dg-pctbar{flex:1;height:8px;border-radius:5px;background:#e8edf5;overflow:hidden;min-width:40px}
+  .dg-pctfill{height:100%;border-radius:5px}
+  .dg-pctn{font-weight:700;font-size:13px;min-width:34px;text-align:right}
+  .dg-tot{font-family:'Archivo Black';font-size:15px;width:46px}
+  .dg-toggle{margin-top:14px;width:100%;padding:11px;border:1.5px solid var(--line);background:var(--panel-soft);border-radius:11px;font-family:'Barlow Condensed';font-weight:600;font-size:15px;letter-spacing:.4px;text-transform:uppercase;color:var(--ink);cursor:pointer}
+  .dg-toggle:hover{border-color:var(--blue);color:var(--blue)}
   .rank.top1{color:var(--gold-d)} .rank.top2{color:#8a93a3} .rank.top3{color:#b5743a}
   .barwrap{position:relative;background:var(--panel-soft);border-radius:9px;height:30px;overflow:hidden;border:1px solid var(--line)}
   .bar{position:absolute;left:0;top:0;bottom:0;border-radius:9px 0 0 9px;display:flex;align-items:center;
@@ -372,6 +398,34 @@
           <thead><tr><th>Participante</th><th class="c" id="thMatch"></th><th class="c">Pts totales</th></tr></thead>
           <tbody id="carBody"></tbody>
         </table>
+      </div>
+    </section>
+
+    <!-- DESGLOSE POR JUGADOR -->
+    <section class="card">
+      <div class="card-h">
+        <div class="eyebrow"><span class="tag blue"></span><h2>Desglose de aciertos por jugador</h2></div>
+      </div>
+      <div class="card-b">
+        <div class="sub" style="margin-top:-4px;margin-bottom:12px">Cuántos aciertos de cada tipo lleva cada participante en todo el torneo</div>
+        <div class="dg-legend">
+          <span><span class="dg-dot d5"></span>5 pts · marcador exacto</span>
+          <span><span class="dg-dot d3"></span>3 pts · resultado + un marcador</span>
+          <span><span class="dg-dot d2"></span>2 pts · solo resultado</span>
+          <span><span class="dg-dot d0"></span>0 pts · falló</span>
+        </div>
+        <input type="text" id="dgSearch" class="dg-search" placeholder="🔍 Busca tu nombre…">
+        <div class="dg-tablewrap">
+          <table class="dg-table">
+            <thead><tr>
+              <th>#</th><th class="lft">Participante</th>
+              <th>5pts</th><th>3pts</th><th>2pts</th><th>0pts</th>
+              <th>% acierto</th><th>Total</th>
+            </tr></thead>
+            <tbody id="dgBody"></tbody>
+          </table>
+        </div>
+        <button class="dg-toggle" id="dgToggle">Ver todos los participantes ▾</button>
       </div>
     </section>
 
@@ -684,6 +738,39 @@ function renderAnalytics(){
        <div class="factbox"><div class="lb">🤯 Más difícil</div><div class="m">${d2.match}</div><div class="pb"><div class="pf" style="width:${Math.max(d2.pct,3)}%;background:var(--red)"></div></div><div class="pn">solo ${d2.pct}% acertó</div></div>
        <div class="factbox"><div class="lb">📊 Promedio del día</div><div class="m">El grupo acertó en promedio</div><div class="pb"><div class="pf" style="width:${Math.max(prom,3)}%;background:var(--blue)"></div></div><div class="pn">${prom}% de aciertos</div></div>`;
   }
+  renderDesglose();
+}
+
+/* ---------- DESGLOSE POR JUGADOR ---------- */
+let dgExpanded=false;
+function renderDesglose(){
+  const dg=AN.desglose;
+  const body=document.getElementById('dgBody');
+  if(!dg||!body) return;
+  const search=(document.getElementById('dgSearch').value||'').trim();
+  const norm=s=>s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+  body.innerHTML=dg.map((r,i)=>{
+    const barcol = r.pct>=65?'var(--green)':(r.pct>=55?'var(--gold)':'var(--red)');
+    const rk = i===0?'rk1':(i===1?'rk2':(i===2?'rk3':''));
+    let show;
+    if(search) show = norm(r.n).includes(norm(search));
+    else show = dgExpanded || i<10;
+    return `<tr class="${show?'':'hidden'}">
+      <td class="dg-num ${rk}">${i+1}</td>
+      <td class="dg-pl">${r.n}</td>
+      <td class="dg-c c5">${r.p5}</td>
+      <td class="dg-c c3">${r.p3}</td>
+      <td class="dg-c c2">${r.p2}</td>
+      <td class="dg-c c0">${r.p0}</td>
+      <td class="dg-pctcell"><div class="dg-pctwrap"><div class="dg-pctbar"><div class="dg-pctfill" style="width:${r.pct}%;background:${barcol}"></div></div><span class="dg-pctn">${r.pct}%</span></div></td>
+      <td class="dg-tot">${r.tot}</td>
+    </tr>`;
+  }).join('');
+  const btn=document.getElementById('dgToggle');
+  if(btn){
+    btn.style.display = search ? 'none' : 'block';
+    btn.textContent = dgExpanded ? 'Ver solo el Top 10 ▴' : `Ver todos los ${dg.length} participantes ▾`;
+  }
 }
 
 /* ---------- init ---------- */
@@ -698,6 +785,12 @@ renderAnalytics();
 /* re-render podium when day changes */
 const obsPrev=document.getElementById('dPrev'),obsNext=document.getElementById('dNext');
 [obsPrev,obsNext].forEach(b=>b.addEventListener('click',()=>{renderPodium();}));
+
+/* desglose: buscador y boton ver todos */
+const dgS=document.getElementById('dgSearch');
+const dgT=document.getElementById('dgToggle');
+if(dgS) dgS.addEventListener('input', renderDesglose);
+if(dgT) dgT.addEventListener('click', ()=>{dgExpanded=!dgExpanded; renderDesglose();});
 
 </script>
 </body>
